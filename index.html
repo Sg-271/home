@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Seaborgium-271 Decay Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="starfield"></canvas>
+
+  <div class="container">
+    <h1>Seaborgium-271 Decay</h1>
+    <div class="timer">Time Since First Visit: <span id="time">0</span> seconds</div>
+    <div class="decay">Remaining: <span id="mass">1000.00000000</span> grams</div>
+    <div class="decayed">Decayed: <span id="decayed">0.00000000</span> grams</div>
+    <div class="added">+1g Clicks: <span id="added-count">0</span></div>
+    <div class="controls">
+      <button id="add-gram">+1 gram</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
