@@ -1,65 +1,350 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Element Decay Simulator</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Decay Simulator</title>
+<style>
+  /* ====== CSS ====== */
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    background-color: black;
+    color: #c9d1d9;
+  }
+  #starfield {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    display: block;
+  }
+  .container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    background-color: rgba(0,0,0,0.75);
+    padding: 25px 30px;
+    border-radius: 12px;
+    max-width: 90vw;
+    box-sizing: border-box;
+    min-width: 300px;
+  }
+  input, select {
+    font-size: 1.1em;
+    margin: 8px 5px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    width: 150px;
+    text-align: center;
+  }
+  button {
+    padding: 12px 26px;
+    font-size: 1.15em;
+    background-color: #238636;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 15px;
+    min-width: 120px;
+    transition: background-color 0.25s;
+  }
+  button:hover {
+    background-color: #2ea043;
+  }
+  #cancel-btn {
+    background-color: #d64545;
+    margin-top: 15px;
+    min-width: 120px;
+  }
+  #cancel-btn:hover {
+    background-color: #a83232;
+  }
+  .hidden {
+    display: none;
+  }
+  h1 {
+    margin-bottom: 15px;
+  }
+  p {
+    margin: 12px 0;
+    font-size: 1.1em;
+  }
+</style>
 </head>
 <body>
-  <canvas id="starfield"></canvas>
 
-  <!-- Intro Screen -->
-  <div class="container" id="intro-screen">
-    <h1>Decay Simulation</h1>
-    <label for="element">Select Element:</label>
-    <select id="element">
-      <option value="Rutherfordium">Rutherfordium</option>
-      <option value="Dubnium">Dubnium</option>
-      <option value="Seaborgium">Seaborgium</option>
-      <option value="Bohrium">Bohrium</option>
-      <option value="Hassium">Hassium</option>
-      <option value="Meitnerium">Meitnerium</option>
-      <option value="Darmstadtium">Darmstadtium</option>
-      <option value="Roentgenium">Roentgenium</option>
-      <option value="Copernicium">Copernicium</option>
-      <option value="Nihonium">Nihonium</option>
-      <option value="Flerovium">Flerovium</option>
-      <option value="Moscovium">Moscovium</option>
-      <option value="Livermorium">Livermorium</option>
-      <option value="Tennessine">Tennessine</option>
-      <option value="Oganesson">Oganesson</option>
-    </select>
+<canvas id="starfield"></canvas>
 
-    <label for="mass">Enter Mass:</label>
-    <input type="number" id="mass" min="0.0001" step="1" value="1">
+<!-- Intro Screen -->
+<div id="intro-screen" class="container">
+  <h1>Decay Simulator</h1>
+  <p>
+    Select element, enter mass, and unit:<br />
+  </p>
+  <select id="element" aria-label="Select element">
+    <option value="Rutherfordium">Rutherfordium</option>
+    <option value="Dubnium">Dubnium</option>
+    <option value="Seaborgium" selected>Seaborgium</option>
+    <option value="Bohrium">Bohrium</option>
+    <option value="Hassium">Hassium</option>
+    <option value="Meitnerium">Meitnerium</option>
+    <option value="Darmstadtium">Darmstadtium</option>
+    <option value="Roentgenium">Roentgenium</option>
+    <option value="Copernicium">Copernicium</option>
+    <option value="Nihonium">Nihonium</option>
+    <option value="Flerovium">Flerovium</option>
+    <option value="Moscovium">Moscovium</option>
+    <option value="Livermorium">Livermorium</option>
+    <option value="Tennessine">Tennessine</option>
+    <option value="Oganesson">Oganesson</option>
+  </select>
+  <input type="number" id="mass" min="0.0001" step="1" value="1" aria-label="Mass input" />
+  <select id="unit" aria-label="Select unit">
+    <option value="grams">grams</option>
+    <option value="kilograms">kilograms</option>
+    <option value="tons">tons</option>
+  </select>
+  <br />
+  <button id="start-btn">Start Decay</button>
+</div>
 
-    <select id="unit">
-      <option value="g">grams</option>
-      <option value="kg">kilograms</option>
-      <option value="ton">tons</option>
-    </select>
+<!-- Decay Screen -->
+<div id="decay-screen" class="container hidden" aria-live="polite">
+  <h1>Decay In Progress</h1>
+  <p id="original-info"></p>
+  <p>Elapsed time: <span id="time">0</span> seconds</p>
+  <p>Remaining mass: <span id="mass-remaining">0</span> grams</p>
+  <p>Decayed mass: <span id="mass-decayed">0</span> grams</p>
+  <button id="cancel-btn">Cancel</button>
+</div>
 
-    <button id="start-btn">Start Simulation</button>
-  </div>
+<!-- Done Screen -->
+<div id="done-screen" class="container hidden" aria-live="polite">
+  <h1>Decay Complete</h1>
+  <p>All of the seaborgium has been decayed.</p>
+  <p>Total time elapsed: <span id="done-time">0</span> seconds</p>
+  <button id="restart-btn">Restart</button>
+</div>
 
-  <!-- Simulation Screen -->
-  <div class="container hidden" id="decay-screen">
-    <h1>Decay in Progress</h1>
-    <p><strong>Element:</strong> <span id="element-name"></span></p>
-    <p><strong>Starting Mass:</strong> <span id="starting-mass"></span></p>
-    <p>Elapsed Time: <span id="time">0</span> seconds</p>
-    <p>Remaining Mass: <span id="mass-remaining">0</span> grams</p>
-    <p>Decayed Mass: <span id="mass-decayed">0</span> grams</p>
-  </div>
+<script>
+  // ==== Configuration ====
+  const ELEMENTS = {
+    Rutherfordium: { symbol: "Rf", halfLife: 70 },       // seconds
+    Dubnium:       { symbol: "Db", halfLife: 34 },
+    Seaborgium:    { symbol: "Sg", halfLife: 144 },
+    Bohrium:       { symbol: "Bh", halfLife: 61 },
+    Hassium:       { symbol: "Hs", halfLife: 10 },
+    Meitnerium:    { symbol: "Mt", halfLife: 7 },
+    Darmstadtium:  { symbol: "Ds", halfLife: 10 },
+    Roentgenium:   { symbol: "Rg", halfLife: 20 },
+    Copernicium:   { symbol: "Cn", halfLife: 35 },
+    Nihonium:      { symbol: "Nh", halfLife: 20 },
+    Flerovium:     { symbol: "Fl", halfLife: 2 },
+    Moscovium:     { symbol: "Mc", halfLife: 0.65 },
+    Livermorium:   { symbol: "Lv", halfLife: 0.6 },
+    Tennessine:    { symbol: "Ts", halfLife: 0.1 },
+    Oganesson:     { symbol: "Og", halfLife: 0.089 }
+  };
 
-  <!-- Completion Screen -->
-  <div class="container hidden" id="done-screen">
-    <h1>All of the element has decayed</h1>
-    <p>Total Time: <span id="done-time"></span> seconds</p>
-    <button id="restart-btn">Restart</button>
-  </div>
+  const decayThreshold = 0.00000001; // grams
 
-  <script src="script.js"></script>
+  // ==== DOM Elements ====
+  const introScreen = document.getElementById("intro-screen");
+  const decayScreen = document.getElementById("decay-screen");
+  const doneScreen = document.getElementById("done-screen");
+
+  const startBtn = document.getElementById("start-btn");
+  const restartBtn = document.getElementById("restart-btn");
+  const cancelBtn = document.getElementById("cancel-btn");
+
+  const unitInput = document.getElementById("unit");
+  const elementInput = document.getElementById("element");
+  const massInput = document.getElementById("mass");
+
+  const timeEl = document.getElementById("time");
+  const massEl = document.getElementById("mass-remaining");
+  const decayedEl = document.getElementById("mass-decayed");
+  const originalEl = document.getElementById("original-info");
+  const doneTimeEl = document.getElementById("done-time");
+
+  let decayInterval;
+
+  // ==== Helpers ====
+  function convertToGrams(mass, unit) {
+    switch (unit) {
+      case "tons": return mass * 1_000_000;
+      case "kilograms": return mass * 1_000;
+      case "grams":
+      default: return mass;
+    }
+  }
+
+  function calculateDecay(startTime, halfLife, initialMass) {
+    const now = new Date();
+    const secondsElapsed = Math.floor((now - new Date(startTime)) / 1000);
+    const remaining = initialMass * Math.pow(0.5, secondsElapsed / halfLife);
+    const decayed = initialMass - remaining;
+    return { secondsElapsed, remaining, decayed };
+  }
+
+  function saveToStorage(data) {
+    localStorage.setItem("decayData", JSON.stringify(data));
+  }
+
+  function loadFromStorage() {
+    const data = localStorage.getItem("decayData");
+    return data ? JSON.parse(data) : null;
+  }
+
+  function showScreen(name) {
+    introScreen.classList.add("hidden");
+    decayScreen.classList.add("hidden");
+    doneScreen.classList.add("hidden");
+    if (name === "intro") introScreen.classList.remove("hidden");
+    if (name === "decay") decayScreen.classList.remove("hidden");
+    if (name === "done") doneScreen.classList.remove("hidden");
+  }
+
+  // ==== Main Decay Loop ====
+  function updateDecayUI() {
+    const data = loadFromStorage();
+    if (!data) return;
+
+    const { secondsElapsed, remaining, decayed } = calculateDecay(
+      data.startTime,
+      data.halfLife,
+      data.initialMass
+    );
+
+    timeEl.textContent = secondsElapsed;
+    massEl.textContent = remaining.toFixed(8);
+    decayedEl.textContent = decayed.toFixed(8);
+    originalEl.textContent = `Started with ${data.originalMass} ${data.originalUnit} of ${data.element}`;
+
+    if (remaining < decayThreshold) {
+      clearInterval(decayInterval);
+      doneTimeEl.textContent = secondsElapsed;
+      showScreen("done");
+    }
+  }
+
+  // ==== Start Button ====
+  startBtn.addEventListener("click", () => {
+    const unit = unitInput.value;
+    const element = elementInput.value;
+    if (!ELEMENTS[element]) {
+      alert("Unknown element selected.");
+      return;
+    }
+    const halfLife = ELEMENTS[element].halfLife;
+    const originalMass = parseFloat(massInput.value);
+
+    if (isNaN(originalMass) || originalMass <= 0) {
+      alert("Please enter a valid mass.");
+      return;
+    }
+
+    const initialMass = convertToGrams(originalMass, unit);
+    const startTime = new Date().toISOString();
+
+    const decayData = {
+      element,
+      halfLife,
+      initialMass,
+      startTime,
+      originalMass,
+      originalUnit: unit
+    };
+
+    saveToStorage(decayData);
+    showScreen("decay");
+    updateDecayUI();
+    decayInterval = setInterval(updateDecayUI, 1000);
+  });
+
+  // ==== Restart Button ====
+  restartBtn.addEventListener("click", () => {
+    localStorage.removeItem("decayData");
+    location.reload();
+  });
+
+  // ==== Cancel Button ====
+  cancelBtn.addEventListener("click", () => {
+    clearInterval(decayInterval);
+    localStorage.removeItem("decayData");
+    showScreen("intro");
+  });
+
+  // ==== On Load ====
+  window.addEventListener("load", () => {
+    const saved = loadFromStorage();
+    if (saved) {
+      showScreen("decay");
+      updateDecayUI();
+      decayInterval = setInterval(updateDecayUI, 1000);
+    } else {
+      showScreen("intro");
+    }
+  });
+
+  // ==== Starfield ====
+  const canvas = document.getElementById('starfield');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  const starCount = 150;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+
+  function createStars() {
+    stars = [];
+    for (let i = 0; i < starCount; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.5 + 0.5,
+        dx: (Math.random() - 0.5) * 0.2,
+        dy: (Math.random() - 0.5) * 0.2
+      });
+    }
+  }
+  createStars();
+
+  function animateStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let star of stars) {
+      star.x += star.dx;
+      star.y += star.dy;
+
+      // Wrap stars around edges
+      if (star.x < 0) star.x = canvas.width;
+      else if (star.x > canvas.width) star.x = 0;
+      if (star.y < 0) star.y = canvas.height;
+      else if (star.y > canvas.height) star.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.r, 0, 2 * Math.PI);
+      ctx.fillStyle = 'white';
+      ctx.shadowColor = 'white';
+      ctx.shadowBlur = 5;
+      ctx.fill();
+    }
+    requestAnimationFrame(animateStars);
+  }
+  animateStars();
+
+</script>
 </body>
 </html>
