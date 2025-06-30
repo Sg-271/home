@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Decay Simulator</title>
 <style>
-  /* ====== CSS ====== */
   body {
     margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -67,6 +66,24 @@
   #cancel-btn:hover {
     background-color: #a83232;
   }
+  #music-toggle {
+    position: fixed;
+    bottom: 12px;
+    right: 12px;
+    background-color: #444;
+    color: white;
+    border-radius: 10px;
+    border: none;
+    padding: 10px 18px;
+    font-size: 1em;
+    cursor: pointer;
+    opacity: 0.75;
+    transition: opacity 0.3s;
+    z-index: 1000;
+  }
+  #music-toggle:hover {
+    opacity: 1;
+  }
   .hidden {
     display: none;
   }
@@ -120,7 +137,7 @@
 <div id="decay-screen" class="container hidden" aria-live="polite">
   <h1>Decay In Progress</h1>
   <p id="original-info"></p>
-  <p>Elapsed time: <span id="time">0</span> seconds</p>
+  <p>Elapsed time: <span id="time">0.000</span> seconds</p>
   <p>Remaining mass: <span id="mass-remaining">0</span> grams</p>
   <p>Decayed mass: <span id="mass-decayed">0</span> grams</p>
   <button id="cancel-btn">Cancel</button>
@@ -129,15 +146,19 @@
 <!-- Done Screen -->
 <div id="done-screen" class="container hidden" aria-live="polite">
   <h1>Decay Complete</h1>
-  <p>All of the seaborgium has been decayed.</p>
-  <p>Total time elapsed: <span id="done-time">0</span> seconds</p>
+  <p id="done-message">All of the seaborgium has been decayed.</p>
+  <p>Total time elapsed: <span id="done-time">0.000</span> seconds</p>
   <button id="restart-btn">Restart</button>
 </div>
+
+<!-- Audio -->
+<audio id="background-music" src="clair_de_lune.mp3" loop></audio>
+<button id="music-toggle" aria-label="Toggle background music">🎵 Play Music</button>
 
 <script>
   // ==== Configuration ====
   const ELEMENTS = {
-    Rutherfordium: { symbol: "Rf", halfLife: 70 },       // seconds
+    Rutherfordium: { symbol: "Rf", halfLife: 70 },
     Dubnium:       { symbol: "Db", halfLife: 34 },
     Seaborgium:    { symbol: "Sg", halfLife: 144 },
     Bohrium:       { symbol: "Bh", halfLife: 61 },
@@ -174,6 +195,7 @@
   const decayedEl = document.getElementById("mass-decayed");
   const originalEl = document.getElementById("original-info");
   const doneTimeEl = document.getElementById("done-time");
+  const doneMessage = document.getElementById("done-message");
 
   let decayInterval;
 
@@ -187,14 +209,6 @@
     }
   }
 
-  function calculateDecay(startTime, halfLife, initialMass) {
-    const now = new Date();
-    const secondsElapsed = Math.floor((now - new Date(startTime)) / 1000);
-    const remaining = initialMass * Math.pow(0.5, secondsElapsed / halfLife);
-    const decayed = initialMass - remaining;
-    return { secondsElapsed, remaining, decayed };
-  }
-
   function saveToStorage(data) {
     localStorage.setItem("decayData", JSON.stringify(data));
   }
@@ -204,123 +218,143 @@
     return data ? JSON.parse(data) : null;
   }
 
-  function showScreen(name) {
+  function clearStorage() {
+    localStorage.removeItem("decayData");
+  }
+
+  function showScreen(screen) {
     introScreen.classList.add("hidden");
     decayScreen.classList.add("hidden");
     doneScreen.classList.add("hidden");
-    if (name === "intro") introScreen.classList.remove("hidden");
-    if (name === "decay") decayScreen.classList.remove("hidden");
-    if (name === "done") doneScreen.classList.remove("hidden");
+    if (screen === "intro") introScreen.classList.remove("hidden");
+    else if (screen === "decay") decayScreen.classList.remove("hidden");
+    else if (screen === "done") doneScreen.classList.remove("hidden");
   }
 
-  // ==== Main Decay Loop ====
+  // ==== Main update UI ====
   function updateDecayUI() {
     const data = loadFromStorage();
-    if (!data) return;
-
-    const { secondsElapsed, remaining, decayed } = calculateDecay(
-      data.startTime,
-      data.halfLife,
-      data.initialMass
-    );
-
-    timeEl.textContent = secondsElapsed;
-    massEl.textContent = remaining.toFixed(8);
-    decayedEl.textContent = decayed.toFixed(8);
-    originalEl.textContent = `Started with ${data.originalMass} ${data.originalUnit} of ${data.element}`;
-
-    if (remaining < decayThreshold) {
+    if (!data) {
       clearInterval(decayInterval);
-      doneTimeEl.textContent = secondsElapsed;
-      showScreen("done");
+      showScreen("intro");
+      return;
     }
+
+    const now = new Date();
+    const startTime = new Date(data.startTime);
+    const secondsElapsed = (now - startTime) / 1000;
+
+    const halfLife = data.halfLife;
+    const originalMass = data.originalMass;
+    const originalUnit = data.originalUnit;
+    const element = data.element;
+
+    // Decay formula: N(t) = N0 * (1/2)^(t / halfLife)
+    const remaining = data.initialMass * Math.pow(0.5, secondsElapsed / halfLife);
+    const decayed = data.initialMass - remaining;
+
+    if (remaining <= decayThreshold) {
+      clearInterval(decayInterval);
+      showScreen("done");
+      doneTimeEl.textContent = `~${secondsElapsed.toFixed(3)}`;
+      doneMessage.textContent = `All of the ${element.toLowerCase()} has been decayed.`;
+      return;
+    }
+
+    timeEl.textContent = secondsElapsed.toFixed(3);
+    massEl.textContent = remaining.toFixed(6);
+    decayedEl.textContent = decayed.toFixed(6);
+    originalEl.textContent = `Element: ${element} (${ELEMENTS[element].symbol}), Starting mass: ${originalMass} ${originalUnit}`;
   }
 
-  // ==== Start Button ====
+  // ==== Button Handlers ====
   startBtn.addEventListener("click", () => {
-    const unit = unitInput.value;
     const element = elementInput.value;
-    if (!ELEMENTS[element]) {
-      alert("Unknown element selected.");
-      return;
-    }
+    const unit = unitInput.value;
     const halfLife = ELEMENTS[element].halfLife;
-    const originalMass = parseFloat(massInput.value);
-
-    if (isNaN(originalMass) || originalMass <= 0) {
-      alert("Please enter a valid mass.");
+    const massRaw = parseFloat(massInput.value);
+    if (isNaN(massRaw) || massRaw <= 0) {
+      alert("Please enter a positive mass.");
       return;
     }
 
-    const initialMass = convertToGrams(originalMass, unit);
-    const startTime = new Date().toISOString();
+    const initialMass = convertToGrams(massRaw, unit);
+    if (initialMass < decayThreshold) {
+      alert("Mass too small to simulate.");
+      return;
+    }
 
-    const decayData = {
+    const data = {
       element,
       halfLife,
       initialMass,
-      startTime,
-      originalMass,
-      originalUnit: unit
+      originalMass: massRaw,
+      originalUnit: unit,
+      startTime: new Date().toISOString(),
     };
 
-    saveToStorage(decayData);
+    saveToStorage(data);
     showScreen("decay");
     updateDecayUI();
-    decayInterval = setInterval(updateDecayUI, 1000);
+
+    decayInterval = setInterval(updateDecayUI, 100);
   });
 
-  // ==== Restart Button ====
-  restartBtn.addEventListener("click", () => {
-    localStorage.removeItem("decayData");
-    location.reload();
-  });
-
-  // ==== Cancel Button ====
   cancelBtn.addEventListener("click", () => {
     clearInterval(decayInterval);
-    localStorage.removeItem("decayData");
+    clearStorage();
     showScreen("intro");
   });
 
-  // ==== On Load ====
+  restartBtn.addEventListener("click", () => {
+    clearInterval(decayInterval);
+    clearStorage();
+    showScreen("intro");
+  });
+
   window.addEventListener("load", () => {
-    const saved = loadFromStorage();
-    if (saved) {
+    const data = loadFromStorage();
+    if (data) {
       showScreen("decay");
       updateDecayUI();
-      decayInterval = setInterval(updateDecayUI, 1000);
+      decayInterval = setInterval(updateDecayUI, 100);
     } else {
       showScreen("intro");
     }
   });
 
-  // ==== Starfield ====
-  const canvas = document.getElementById('starfield');
-  const ctx = canvas.getContext('2d');
+  // ==== Starfield animation ====
+  const canvas = document.getElementById("starfield");
+  const ctx = canvas.getContext("2d");
+
   let stars = [];
-  const starCount = 150;
 
-  function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+  function randomRange(min, max) {
+    return Math.random() * (max - min) + min;
   }
-  window.addEventListener("resize", resizeCanvas);
-  resizeCanvas();
 
-  function createStars() {
+  function initStars() {
     stars = [];
+    const starCount = 150;
     for (let i = 0; i < starCount; i++) {
       stars.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        r: Math.random() * 1.5 + 0.5,
-        dx: (Math.random() - 0.5) * 0.2,
-        dy: (Math.random() - 0.5) * 0.2
+        r: randomRange(0.5, 1.5),
+        dx: randomRange(-0.05, 0.05),
+        dy: randomRange(-0.05, 0.05),
       });
     }
   }
-  createStars();
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    initStars();
+  }
+
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
 
   function animateStars() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -328,7 +362,6 @@
       star.x += star.dx;
       star.y += star.dy;
 
-      // Wrap stars around edges
       if (star.x < 0) star.x = canvas.width;
       else if (star.x > canvas.width) star.x = 0;
       if (star.y < 0) star.y = canvas.height;
@@ -336,15 +369,30 @@
 
       ctx.beginPath();
       ctx.arc(star.x, star.y, star.r, 0, 2 * Math.PI);
-      ctx.fillStyle = 'white';
-      ctx.shadowColor = 'white';
+      ctx.fillStyle = "white";
+      ctx.shadowColor = "white";
       ctx.shadowBlur = 5;
       ctx.fill();
     }
     requestAnimationFrame(animateStars);
   }
+
   animateStars();
 
+  // ==== Music toggle ====
+  const music = document.getElementById("background-music");
+  const musicToggle = document.getElementById("music-toggle");
+
+  musicToggle.addEventListener("click", () => {
+    if (music.paused) {
+      music.play();
+      musicToggle.textContent = "🔇 Pause Music";
+    } else {
+      music.pause();
+      musicToggle.textContent = "🎵 Play Music";
+    }
+  });
 </script>
+
 </body>
 </html>
