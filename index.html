@@ -1,23 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Seaborgium-271 Decay Tracker</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Element Decay Simulator</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <canvas id="starfield"></canvas>
 
-  <div class="container">
-    <h1>Seaborgium-271 Decay</h1>
-    <div class="timer">Time Since First Visit: <span id="time">0</span> seconds</div>
-    <div class="decay">Remaining: <span id="mass">1000.00000000</span> grams</div>
-    <div class="decayed">Decayed: <span id="decayed">0.00000000</span> grams</div>
-    <div class="added">+1g Clicks: <span id="added-count">0</span></div>
-    <div class="controls">
-      <button id="add-gram">+1 gram</button>
-    </div>
+  <!-- Intro Screen -->
+  <div class="container" id="intro-screen">
+    <h1>Decay Simulation</h1>
+    <label for="element">Select Element:</label>
+    <select id="element">
+      <option value="Rutherfordium">Rutherfordium</option>
+      <option value="Dubnium">Dubnium</option>
+      <option value="Seaborgium">Seaborgium</option>
+      <option value="Bohrium">Bohrium</option>
+      <option value="Hassium">Hassium</option>
+      <option value="Meitnerium">Meitnerium</option>
+      <option value="Darmstadtium">Darmstadtium</option>
+      <option value="Roentgenium">Roentgenium</option>
+      <option value="Copernicium">Copernicium</option>
+      <option value="Nihonium">Nihonium</option>
+      <option value="Flerovium">Flerovium</option>
+      <option value="Moscovium">Moscovium</option>
+      <option value="Livermorium">Livermorium</option>
+      <option value="Tennessine">Tennessine</option>
+      <option value="Oganesson">Oganesson</option>
+    </select>
+
+    <label for="mass">Enter Mass:</label>
+    <input type="number" id="mass" min="0.0001" step="any" value="1">
+
+    <select id="unit">
+      <option value="g">grams</option>
+      <option value="kg">kilograms</option>
+      <option value="ton">tons</option>
+    </select>
+
+    <button id="start-btn">Start Simulation</button>
+  </div>
+
+  <!-- Simulation Screen -->
+  <div class="container hidden" id="decay-screen">
+    <h1>Decay in Progress</h1>
+    <p><strong>Element:</strong> <span id="element-name"></span></p>
+    <p><strong>Starting Mass:</strong> <span id="starting-mass"></span></p>
+    <p>Elapsed Time: <span id="time">0</span> seconds</p>
+    <p>Remaining Mass: <span id="mass-remaining">0</span> grams</p>
+    <p>Decayed Mass: <span id="mass-decayed">0</span> grams</p>
+  </div>
+
+  <!-- Completion Screen -->
+  <div class="container hidden" id="done-screen">
+    <h1>All of the element has decayed</h1>
+    <p>Total Time: <span id="done-time"></span> seconds</p>
+    <button id="restart-btn">Restart</button>
   </div>
 
   <script src="script.js"></script>
